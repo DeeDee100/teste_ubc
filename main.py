@@ -33,7 +33,7 @@ def get_df_json(csv_name):
     df["timestamp_dob"] = pd.to_datetime(df["data_de_nascimento"])
     df["warnings"] = df["timestamp_dob"].apply(get_age)
     df.drop("timestamp_dob", axis=1, inplace=True)
-    nan_rows = df.isnull().any(axis=1).to_list()
+    nan_rows = df[df.isnull().any(axis=1)].index.to_list()
     df.fillna(0, inplace=True)
     for i in df.index:
         if df.at[i, "idade"] == df.at[i, "warnings"]:
@@ -42,8 +42,8 @@ def get_df_json(csv_name):
             df.at[i, "warnings"] = "Data de nascimento e idade são incopatíveis"
             logger.warning(f"Data de nascimento e idade nao coincidem, warning criado no index {i}")
         if i in nan_rows:
-            df.at[i, "warnings"] = df.at[i, "warnings"] + "Nan encontrado, preenchido com 0"
-            logger.warning(f"NaN encontrado, prenchido com 0 index {i + 1}")
+            df.at[i, "warnings"] = df.at[i, "warnings"] + "; Nan encontrado, preenchido com 0"
+            logger.warning(f"NaN encontrado, prenchido com 0 index {i}")
     
     json_object = json.loads(df.to_json(orient="records"))
     return json_object
