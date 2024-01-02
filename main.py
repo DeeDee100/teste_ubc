@@ -1,33 +1,41 @@
 import pandas as pd
-from unidecode  import unidecode
+from unidecode import unidecode
 import json
 import pysolr
-import requests
+from dateutil.relativedelta import relativedelta
+import numpy as np
+import subprocess
 
-pysolr.SolrCoreAdmin()
+
+def f(dob):
+    r = relativedelta(pd.to_datetime("now"), dob)
+
+    return r.years
+
+
+def format_df():
+    df = pd.read_csv("aluno.csv")
+    df.columns = [col.lower() for col in df]
+    df.columns = [col.replace(" ", "_") for col in df]
+    df.columns = [unidecode(col) for col in df]
+    df["data_de_nascimento"] = pd.to_datetime(df["data_de_nascimento"])
+    df["warnings"] = df["data_de_nascimento"].apply(f)
+    np.where(df["idade"] == df["warnings"], "", "DOB and age dont match")
+    df.fillna("")
+    json_object = json.loads(df.to_json(orient="records"))
+    return json_object
 
 
 def main():
-    df = pd.read_csv('aluno.csv')
-    df.columns=[col.lower() for col in df]
-    df.columns=[col.replace(" ", "_") for col in df]
-    df.columns=[unidecode(col) for col in df]
-    # breakpoint()
-    print('oi')
+    json_to_upload = format_df()
+    core_name = "aluno2"
+    docker_run = f"docker exec -it solr_instance solr create_core -c {core_name}"
+    subprocess.call(docker_run, shell=True)
 
-core_name = 'aluno'
-
-# create core    
-requests.post(f'http://localhost:8983/solr/admin/cores?action=CREATE&name={core_name}&instanceDir={core_name}')
-
-breakpoint()
-
-# Create a client instance. The timeout and authentication options are not required.
-solr = pysolr.Solr(f'http://localhost:8983/solr/{core_name}')
+    solr = pysolr.Solr(f"http://localhost:8983/solr/{core_name}")
+    solr.add(json_to_upload)
+    solr.commit()
 
 
-res = solr.ping()
-response = json.loads(res)
-if response.get('status') != 'OK':
-    print(res)
-    raise ConnectionError('could not ping the core. please check log above')
+if __name__ == "__main__":
+    main()
