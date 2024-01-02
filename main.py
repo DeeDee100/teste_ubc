@@ -21,6 +21,7 @@ def get_df_json(csv_name):
     df["timestamp_dob"] = pd.to_datetime(df["data_de_nascimento"])
     df["warnings"] = df["timestamp_dob"].apply(get_age)
     df.drop("timestamp_dob", axis=1, inplace=True)
+    df.fillna(0, inplace=True)
 
     for i in df.index:
         if df.at[i, "idade"] == df.at[i, "warnings"]:
@@ -40,26 +41,34 @@ def config_core(core_name):
         {"name": "nome", "type": "text_general", "stored": "true", "required": "true"},
         {"name": "idade", "type": "pint", "stored": "true", "required": "true"},
         {"name": "serie", "type": "pint", "stored": "true", "required": "true"},
-        {"name": "endereco", "type": "textField", "stored": "true"},
-        {"name": "nome_pai", "type": "textField", "stored": "true"},
-        {"name": "nome_mae", "type": "textField", "stored": "true"},
+        {"name": "endereco", "type": "text_general", "stored": "true"},
+        {"name": "nome_pai", "type": "text_general", "stored": "true"},
+        {"name": "nome_mae", "type": "text_general", "stored": "true"},
         {"name": "nota_media", "type": "pfloat", "stored": "true", "required": "true"},
         {"name": "data_de_nascimento", "type": "pdate", "stored": "true"},
-        {"name": "warnings", "type": "textField", "stored": "true"},
+        {"name": "warnings", "type": "text_general", "stored": "true"}
     ]
 
     for field in field_list:
         json_data = {"add-field": field}
-        requests.post(
-            "http://localhost:8983/solr/teste/schema", headers=headers, json=json_data
+        response = requests.post(
+            f"http://localhost:8983/solr/{core_name}/schema", headers=headers, json=json_data
         )
+        if response.status_code != 200:
+            print("Campo não criado.")
+            print(f"Error: \n{response.content}")
 
 
 def main():
-    json_to_upload = get_df_json()
     core_name = "aluno"
-    config_core(core_name)
     solr = pysolr.Solr(f"http://localhost:8983/solr/{core_name}")
+    try:
+        solr.ping()
+        print('Core encontrado, pulando criação...\n')
+    except pysolr.SolrError:
+        print('Criando core...')
+        config_core(core_name)
+    json_to_upload = get_df_json('aluno.csv')
     solr.add(json_to_upload)
     solr.commit()
 
