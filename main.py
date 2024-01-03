@@ -39,10 +39,10 @@ def get_df_json(csv_name):
         if df.at[i, "idade"] == df.at[i, "warnings"]:
             df.at[i, "warnings"] = ""
         else:
-            df.at[i, "warnings"] = "Data de nascimento e idade são incopatíveis"
+            df.at[i, "warnings"] = "Data de nascimento e idade são incopatíveis;"
             logger.warning(f"Data de nascimento e idade nao coincidem, warning criado no index {i}")
         if i in nan_rows:
-            df.at[i, "warnings"] = df.at[i, "warnings"] + "; Nan encontrado, preenchido com 0"
+            df.at[i, "warnings"] = df.at[i, "warnings"] + "Nan encontrado, preenchido com 0;"
             logger.warning(f"NaN encontrado, prenchido com 0 index {i}")
     
     json_object = json.loads(df.to_json(orient="records"))
@@ -72,7 +72,7 @@ def config_core(core_name):
         )
         if response.status_code != 200:
             logger.warn(f'Campo não criado - log, erro: \n{response.content}')
-
+    logger.info(f"Core {core_name} criado com sucesso.")
 
 
 def main():
